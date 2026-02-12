@@ -142,14 +142,28 @@
       <div class="subtitle">Latência Materializada</div>
     </div>
 
-    <!-- Mercado: indicador sistêmico (não interativo) -->
+    <!-- Mercado: LUCRO × IMPACTO (rotação automática) -->
     <div class="market-widget" id="marketWidget" aria-hidden="true">
       <div class="mw-top">
         <div class="mw-kicker">MERCADO</div>
-        <div class="mw-title">CAPEX / INFRA IA</div>
+        <div class="mw-title">LUCRO × IMPACTO</div>
       </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+        <div style="border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:8px">
+          <div style="font-size:8px;letter-spacing:2px;opacity:.4;text-transform:uppercase;margin-bottom:6px">Receita IA (2025)</div>
+          <div style="font-size:13px;letter-spacing:1px;opacity:.85;font-variant-numeric:tabular-nums;font-weight:600" id="revenueVal">$13B</div>
+          <div style="font-size:7px;letter-spacing:1.5px;opacity:.35;margin-top:4px;text-transform:uppercase">+252% a/a</div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:8px">
+          <div style="font-size:8px;letter-spacing:2px;opacity:.4;text-transform:uppercase;margin-bottom:6px">CO₂ Anual (2025)</div>
+          <div style="font-size:13px;letter-spacing:1px;opacity:.85;font-variant-numeric:tabular-nums;font-weight:600" id="co2Val">79.7Mt</div>
+          <div style="font-size:7px;letter-spacing:1.5px;opacity:.35;margin-top:4px;text-transform:uppercase">~NYC inteira</div>
+        </div>
+      </div>
+      
       <div class="mw-row">
-        <div class="mw-state" id="mwState">ESTÁVEL</div>
+        <div class="mw-state" id="mwState">CRESCIMENTO</div>
         <div class="mw-val" id="mwVal">0.50</div>
       </div>
       <div class="mw-bar">
@@ -158,14 +172,15 @@
       <canvas class="mw-spark" id="mwSpark" width="220" height="34"></canvas>
 
       <div class="mw-companies">
-        <div class="mw-c-title">CADEIA DE EXTRAÇÃO (estimado)</div>
-        <div class="mw-c-row"><b>Glencore</b> • Mineração • <span>≈3.1 TWh</span></div>
-        <div class="mw-c-row"><b>Vale Base Metals</b> • Minerais • <span>≈1.7 TWh</span></div>
-        <div class="mw-c-row"><b>Siemens Energy</b> • Infraestrutura • <span>≈2.5 TWh</span></div>
-        <div class="mw-c-row"><b>EDP Renováveis</b> • Energia • <span>≈1.3 TWh</span></div>
-        <div class="mw-c-note">Dados e energia de usuários alimentam IA (~40%)</div>
+        <div class="mw-c-title" id="companiesCategory">Big Tech IA</div>
+        <div id="companiesList">
+          <div class="mw-c-row"><b>Microsoft</b> <span>$13B receita IA/ano</span></div>
+          <div class="mw-c-row"><b>Google</b> <span>$102B Q3/25</span></div>
+          <div class="mw-c-row"><b>Amazon</b> <span>AWS $33B</span></div>
+          <div class="mw-c-row"><b>Meta</b> <span>$40.6B Q3/25</span></div>
+        </div>
+        <div class="mw-c-note" id="companiesNote">Rotação 6s | CNBC 2025</div>
       </div>
-      <div class="mw-note">Verde acelera extração • Vermelho contrai</div>
     </div>
 
     <div class="legend">
@@ -446,6 +461,125 @@
   const mwFill = document.getElementById('mwFill');
   const mwSpark = document.getElementById('mwSpark');
   const mwCtx = mwSpark.getContext('2d');
+  const revenueVal = document.getElementById('revenueVal');
+  const co2Val = document.getElementById('co2Val');
+  const companiesList = document.getElementById('companiesList');
+  const companiesCategory = document.getElementById('companiesCategory');
+  const companiesNote = document.getElementById('companiesNote');
+  
+  const revenueData = [
+    {year:2023, revenue:1, co2:20},
+    {year:2024, revenue:3.7, co2:50},
+    {year:2025, revenue:13, co2:79.7}
+  ];
+  
+  // TODAS as empresas com DADOS REAIS 2024-2025
+  const companyCategories = [
+    {
+      title: 'Big Tech IA',
+      note: 'CNBC, S&P Global Q3 2025',
+      companies: [
+        {name: 'Microsoft', desc: '$13B receita IA/ano'},
+        {name: 'Google', desc: '$102B Q3/25 (+34%)'},
+        {name: 'Amazon', desc: 'AWS $33B (+20%)'},
+        {name: 'Meta', desc: '$40.6B Q3/25'}
+      ]
+    },
+    {
+      title: 'Semicondutores',
+      note: 'YCharts Nov 2025',
+      companies: [
+        {name: 'NVIDIA', desc: '$35.1B Q3 (+93.6%)'},
+        {name: 'TSMC', desc: 'Fabricação 5nm/3nm'},
+        {name: 'Intel', desc: 'Xeon, Gaudi AI'},
+        {name: 'AMD', desc: 'MI300X, EPYC'}
+      ]
+    },
+    {
+      title: 'CapEx IA 2025',
+      note: 'CNBC, Built In Nov 2025',
+      companies: [
+        {name: 'Amazon', desc: '$125B CapEx (+51%)'},
+        {name: 'Google', desc: '$91-93B CapEx'},
+        {name: 'Microsoft', desc: '$80B CapEx'},
+        {name: 'Meta', desc: '$60-65B CapEx'}
+      ]
+    },
+    {
+      title: 'Mineração',
+      note: 'Glencore, CODELCO 2024-25',
+      companies: [
+        {name: 'Glencore', desc: '38.2K ton Co/952K Cu'},
+        {name: 'CODELCO', desc: '1.33M ton Cu (28%)'},
+        {name: 'Vale', desc: 'Cobre, Níquel'},
+        {name: 'SQM', desc: 'Lítio Atacama'}
+      ]
+    },
+    {
+      title: 'Data Centers',
+      note: 'Synergy Research 2025',
+      companies: [
+        {name: 'Equinix', desc: '260+ DCs globais'},
+        {name: 'Digital Realty', desc: 'Hyperscale'},
+        {name: 'NTT', desc: 'Ásia-Pacífico'},
+        {name: 'CyrusOne', desc: 'US & Europa'}
+      ]
+    },
+    {
+      title: 'Energia & Grid',
+      note: 'IEA 2025, EirGrid',
+      companies: [
+        {name: 'EirGrid', desc: '21% grid Irlanda'},
+        {name: 'Siemens Energy', desc: 'Infra global'},
+        {name: 'EDP Renováveis', desc: 'Renovável'},
+        {name: 'NextEra', desc: 'Limpa EUA'}
+      ]
+    },
+    {
+      title: 'Impactos Sociais',
+      note: 'Amnesty, Fairwork, CBS 24-25',
+      companies: [
+        {name: 'Sama', desc: 'Rotulação Quênia'},
+        {name: 'Scale AI', desc: 'Microtarefas'},
+        {name: 'Concentrix', desc: 'BPO Filipinas'},
+        {name: 'Gécamines', desc: 'Cobalto RDC'}
+      ]
+    },
+    {
+      title: 'E-waste',
+      note: 'UNITAR/ITU 2024',
+      companies: [
+        {name: 'Sims Metal', desc: 'Reciclagem e-lixo'},
+        {name: 'Umicore', desc: 'Metais preciosos'},
+        {name: 'Boliden', desc: 'Rec. baterias'},
+        {name: 'Stena', desc: 'E-waste Europa'}
+      ]
+    }
+  ];
+  
+  let currentCategoryIndex = 0;
+  let lastCategorySwitch = performance.now();
+  
+  function updateCompanyDisplay(){
+    const now = performance.now();
+    if (now - lastCategorySwitch > 6000){
+      lastCategorySwitch = now;
+      currentCategoryIndex = (currentCategoryIndex + 1) % companyCategories.length;
+      
+      const cat = companyCategories[currentCategoryIndex];
+      companiesCategory.textContent = cat.title;
+      companiesNote.textContent = 'Rotação 6s | ' + cat.note;
+      
+      companiesList.innerHTML = '';
+      cat.companies.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'mw-c-row';
+        row.innerHTML = `<b>${c.name}</b> <span>${c.desc}</span>`;
+        companiesList.appendChild(row);
+      });
+    }
+  }
+  
   let market = 0.50;
   let marketTarget = 0.50;
   const marketHistory = new Array(64).fill(market);
@@ -456,35 +590,46 @@
     market = Math.max(0, Math.min(1, market));
     marketHistory.push(market);
     if (marketHistory.length > 64) marketHistory.shift();
+    
+    updateCompanyDisplay();
   }
   function marketLabel(v){
-    if (v >= 0.62) return 'EXPANSÃO';
-    if (v <= 0.38) return 'CONTRAÇÃO';
+    if (v >= 0.62) return 'CRESCIMENTO';
+    if (v <= 0.38) return 'DESACELERAÇÃO';
     return 'ESTÁVEL';
   }
   function renderMarketUI(){
     mwState.textContent = marketLabel(market);
     mwVal.textContent = market.toFixed(2);
     mwFill.style.width = Math.round(market * 100) + '%';
+    
+    revenueVal.textContent = '$13B';
+    co2Val.textContent = '79.7Mt';
 
     mwCtx.clearRect(0,0,mwSpark.width,mwSpark.height);
-    mwCtx.globalAlpha = 0.9;
-    mwCtx.lineWidth = 1.2;
-    mwCtx.strokeStyle = 'rgba(255,255,255,.55)';
+    
+    // Sparkline Receita (verde)
+    mwCtx.strokeStyle = 'rgba(100,200,100,0.6)';
+    mwCtx.lineWidth = 1.5;
     mwCtx.beginPath();
-    for (let i=0;i<marketHistory.length;i++){
-      const v = marketHistory[i];
-      const x = (i/(marketHistory.length-1)) * (mwSpark.width-2) + 1;
-      const y = (1 - v) * (mwSpark.height-6) + 3;
-      if (i===0) mwCtx.moveTo(x,y); else mwCtx.lineTo(x,y);
+    for (let i = 0; i < revenueData.length; i++){
+      const x = (i / (revenueData.length - 1)) * mwSpark.width;
+      const y = mwSpark.height - (revenueData[i].revenue / 13) * (mwSpark.height - 6);
+      if (i === 0) mwCtx.moveTo(x, y);
+      else mwCtx.lineTo(x, y);
     }
     mwCtx.stroke();
-    const xNow = mwSpark.width - 2;
-    const yNow = (1 - market) * (mwSpark.height-6) + 3;
-    mwCtx.fillStyle = 'rgba(255,255,255,.9)';
+    
+    // Sparkline CO2 (vermelho)
+    mwCtx.strokeStyle = 'rgba(255,100,100,0.6)';
     mwCtx.beginPath();
-    mwCtx.arc(xNow, yNow, 1.7, 0, Math.PI*2);
-    mwCtx.fill();
+    for (let i = 0; i < revenueData.length; i++){
+      const x = (i / (revenueData.length - 1)) * mwSpark.width;
+      const y = mwSpark.height - (revenueData[i].co2 / 80) * (mwSpark.height - 6);
+      if (i === 0) mwCtx.moveTo(x, y);
+      else mwCtx.lineTo(x, y);
+    }
+    mwCtx.stroke();
   }
 
   // ===== Chain logic: everything is always active; lens changes visibility =====
@@ -933,12 +1078,8 @@
   });
   window.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
-    const newCamX = camStartX + (e.clientX - dragStartX);
-    const newCamY = camStartY + (e.clientY - dragStartY);
-    // Limitar pan para não se perder
-    const maxPan = Math.max(width, height) * 0.8;
-    camX = Math.max(-maxPan, Math.min(maxPan, newCamX));
-    camY = Math.max(-maxPan, Math.min(maxPan, newCamY));
+    camX = camStartX + (e.clientX - dragStartX);
+    camY = camStartY + (e.clientY - dragStartY);
   }, { passive:true });
 
   // zoom (cursor-centered)
@@ -946,14 +1087,14 @@
     e.preventDefault();
     const before = worldFromScreen(e.clientX, e.clientY);
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    zoom = Math.max(0.6, Math.min(2.4, zoom * factor));
+    zoom = Math.max(0.05, Math.min(10, zoom * factor));
     const after = worldFromScreen(e.clientX, e.clientY);
     camX += (after.x - before.x) * zoom;
     camY += (after.y - before.y) * zoom;
   }, { passive:false });
 
-  document.getElementById('zoomIn').addEventListener('click', () => { zoom = Math.min(2.4, zoom * 1.1); });
-  document.getElementById('zoomOut').addEventListener('click', () => { zoom = Math.max(0.6, zoom * 0.9); });
+  document.getElementById('zoomIn').addEventListener('click', () => { zoom = Math.min(10, zoom * 1.1); });
+  document.getElementById('zoomOut').addEventListener('click', () => { zoom = Math.max(0.05, zoom * 0.9); });
 
   // ===== Auto sweep =====
   const sweepOrder = ['all','energia','agua','minerais','latencia','governanca','ewaste','ausencia'];
